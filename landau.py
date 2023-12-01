@@ -1,6 +1,8 @@
 from matplotlib import pyplot as plt
-from numpy import linspace, random, pi, zeros, histogram2d, hypot, concatenate, sin, stack, ravel
+from numpy import linspace, random, pi, zeros, histogram2d, hypot, sin, stack, ravel
 from scipy import integrate
+
+from colormap import colormap
 
 k = 3*pi  # three eyes in frame at any time
 ω = 4*pi  # two full oscillations in a 1s video
@@ -50,7 +52,7 @@ def plot_phase_space(x_grid, v_grid, t, x, v):
 					histogram += histogram2d(x[:, i] + dx, v[:, i] + dv, bins=(x_grid, v_grid))[0]
 		plt.imshow(histogram.transpose(), extent=(x_grid[0], x_grid[-1], v_grid[0], v_grid[-1]),
 		           vmin=0, vmax=180, aspect="auto",
-		           origin="lower", cmap="bone_r")
+		           origin="lower", cmap=colormap)
 		plt.pause(0.05)
 	plt.show()
 

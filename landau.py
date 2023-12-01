@@ -1,6 +1,6 @@
-import numpy as np
 from matplotlib import pyplot as plt
 from numpy import linspace, random, pi, zeros, histogram2d, hypot, sin, stack, ravel, cos, histogram, repeat
+from numpy.typing import NDArray
 from scipy import integrate
 
 from colormap import colormap
@@ -42,7 +42,8 @@ def main():
 	plt.show()
 
 
-def plot_phase_space(x_grid, v_grid, t, x, v):
+def plot_phase_space(x_grid: NDArray[float], v_grid: NDArray[float], t: NDArray[float],
+                     x: NDArray[float], v: NDArray[float]):
 	fig, ((ax_E, space), (ax_image, ax_v)) = plt.subplots(
 		nrows=2, ncols=2, facecolor="none", sharex="col", sharey="row",
 		gridspec_kw=dict(
@@ -80,7 +81,8 @@ def plot_phase_space(x_grid, v_grid, t, x, v):
 			for dy in linspace(-r_particle, r_particle, 9):
 				if hypot(dx, dy) < r_particle:
 					dv = dy/(x_grid[1] - x_grid[0])*(v_grid[1] - v_grid[0])
-					image += histogram2d(x[:, i] + dx, v[:, i] + dv, bins=(x_grid, v_grid))[0]
+					image += histogram2d(periodicize(x[:, i] + dx, -1, 1),
+					                     v[:, i] + dv, bins=(x_grid, v_grid))[0]
 		ax_image.clear()
 		ax_image.set_xlabel("Position")
 		ax_image.set_ylabel("Velocity")
@@ -90,6 +92,10 @@ def plot_phase_space(x_grid, v_grid, t, x, v):
 		plt.tight_layout()
 		plt.pause(0.05)
 	plt.show()
+
+
+def periodicize(x: NDArray[float], minimum: float, maximum: float) -> NDArray[float]:
+	return minimum + (x - minimum) % (maximum - minimum)
 
 
 if __name__ == "__main__":

@@ -69,9 +69,9 @@ def plot_phase_space(x_grid, v_grid, t, x, v):
 		# plot the distribution function as a function of velocity (space-averaged)
 		ax_v.clear()
 		ax_v.set_xticks([])
-		ax_v.set_xlabel("Distribution")
+		ax_v.set_xlabel("Distribution", color="#215772")
 		f_v, v_bins = histogram(v[:, i], v_grid[0::3])
-		ax_v.fill_betweenx(repeat(v_bins, 2)[1:-1], 0, repeat(f_v, 2), color=(0.02069442,0.01183243,0.33169097))
+		ax_v.fill_betweenx(repeat(v_bins, 2)[1:-1], 0, repeat(f_v, 2), color="#356884")
 		ax_v.set_xlim(0, v[:, i].size*3.2e-2)
 
 		r_particle = (x_grid[1] - x_grid[0])*2.0

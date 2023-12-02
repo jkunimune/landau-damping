@@ -1,3 +1,4 @@
+import logging
 from os import makedirs
 
 from imageio.v2 import mimsave
@@ -21,15 +22,16 @@ x_grid = linspace(-1.5, 1.5, 361)  # normalized spacial coordinates
 v_grid = linspace(-0.6*ω/k, 2.1*ω/k, 201)  # set velocity bounds to see wave velocity
 
 num_samples = 100_000
+frame_rate = 30
+duration = 10
 
 
 def main():
 
+	logging.info("begin.")
+
 	random.seed(0)
 	makedirs("output", exist_ok=True)
-
-	frame_rate = 24
-	duration = 5
 
 	v0 = random.normal(0, v_thermal, num_samples)  # maxwellian inital distribution
 	v0 = v0[(v0 > v_grid[0] - 0.1*ω/k) & (v0 < v_grid[-1] + 0.1*ω/k)]  # exclude particles off screen
@@ -70,6 +72,7 @@ def main():
 					filename += "_ballistic"
 				if trajectories:
 					filename += "_with_trajectories"
+				logging.info(f"generating {filename}.gif...")
 
 				# plot it all
 				plot_phase_space(x_grid, v_grid, t, x, v, field_on, wave_frame, trajectories,
@@ -78,7 +81,7 @@ def main():
 				# combine the images into a single animated image
 				make_gif(filename, len(t), frame_rate)
 
-				plt.show()
+	logging.info("done!")
 
 
 def plot_phase_space(x_grid_initial: NDArray[float], v_grid: NDArray[float], t: NDArray[float],
@@ -193,4 +196,8 @@ def format_as_fraction(coefficient: float, numerator: str, denominator: str):
 
 
 if __name__ == "__main__":
+	logging.basicConfig(
+		level=logging.INFO,
+		format="{asctime} | {levelname:4s} | {message}",
+		style="{")
 	main()

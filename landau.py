@@ -101,8 +101,8 @@ def plot_phase_space(x_grid_initial: NDArray[float], v_grid: NDArray[float], t: 
 		# show the current time
 		textbox.clear()
 		textbox.axis("off")
-		textbox.text(1, 1, f"$t = {t[i]:4.2f}\\,\\mathrm{{s}}$",
-		             horizontalalignment="right", verticalalignment="top",
+		textbox.text(.13, .95, f"$t$ = {t[i]:4.2f} s",
+		             horizontalalignment="left", verticalalignment="top",
 		             transform=textbox.transAxes)
 
 		# plot the electric field and potential as functions of space
@@ -113,8 +113,7 @@ def plot_phase_space(x_grid_initial: NDArray[float], v_grid: NDArray[float], t: 
 		          color="#672392", linewidth=1.4, zorder=20)
 		ax_V.clear()
 		ax_V.set_yticks([])
-		ax_V.yaxis.set_label_position("right")
-		ax_V.set_ylabel("Potential", color="#bf5a09", rotation=-90, labelpad=12)
+		ax_V.set_ylabel("Potential", color="#bf5a09", labelpad=17)
 		ax_V.plot(x_grid, g0/k*cos(k*x_grid - ω*t[i]) if field_on else zeros_like(x_grid),
 		          color="#e1762b", linewidth=1.4, linestyle="dotted", zorder=10)
 
@@ -147,7 +146,7 @@ def plot_phase_space(x_grid_initial: NDArray[float], v_grid: NDArray[float], t: 
 		if field_on:
 			ax_image.yaxis.set_major_locator(ticker.MultipleLocator(0.5*ω/k))
 			ax_image.yaxis.set_major_formatter(lambda v, _: format_as_fraction(v/(ω/k), "ω", "k"))
-			ax_image.tick_params(axis="y", which="major", labelsize=14)
+			ax_image.tick_params(axis="y", which="major", labelsize=15)
 		else:
 			ax_image.yaxis.set_major_locator(ticker.MultipleLocator(1.0))
 

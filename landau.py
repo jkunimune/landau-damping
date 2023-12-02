@@ -5,7 +5,7 @@ from imageio.v2 import mimsave
 from imageio.v3 import imread
 from matplotlib import pyplot as plt, ticker
 from numpy import linspace, random, pi, zeros, histogram2d, hypot, sin, stack, ravel, cos, histogram, repeat, \
-	zeros_like, sqrt, meshgrid, arange, concatenate, full, size, where, diff, exp
+	zeros_like, sqrt, meshgrid, arange, concatenate, full, size, where, diff, exp, newaxis, uint8
 from numpy.typing import NDArray
 from scipy import integrate
 
@@ -176,7 +176,11 @@ def periodicize(x: NDArray[float], minimum: float, maximum: float) -> NDArray[fl
 def make_gif(base_filename: str, num_frames: int, frame_rate: float):
 	frames = []
 	for i in range(num_frames):
-		frames.append(imread(f"{base_filename}_at_t{i:03d}.png"))
+		frame = imread(f"{base_filename}_at_t{i:03d}.png")
+		rgb = frame[:, :, :3]
+		alpha = frame[:, :, 3, newaxis]/255.
+		frame = (rgb*alpha + 255*(1 - alpha)).astype(uint8) # remove transparency with a white background
+		frames.append(frame)
 	mimsave(f"{base_filename}.gif", frames, fps=frame_rate)
 
 

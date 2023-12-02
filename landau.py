@@ -116,7 +116,7 @@ def plot_phase_space(x_grid_initial: NDArray[float], v_grid: NDArray[float], t: 
 		          color="#672392", linewidth=1.4, zorder=20)
 		ax_V.clear()
 		ax_V.set_yticks([])
-		ax_V.set_ylabel("Potential", color="#bf5a09", labelpad=17)
+		ax_V.set_ylabel("Potential", color="#ce661a", labelpad=17)
 		ax_V.plot(x_grid, g0/k*cos(k*x_grid - ω*t[i]) if field_on else zeros_like(x_grid),
 		          color="#e1762b", linewidth=1.4, linestyle="dotted", zorder=10)
 

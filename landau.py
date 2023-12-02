@@ -4,7 +4,7 @@ from imageio.v2 import mimsave
 from imageio.v3 import imread
 from matplotlib import pyplot as plt, ticker
 from numpy import linspace, random, pi, zeros, histogram2d, hypot, sin, stack, ravel, cos, histogram, repeat, \
-	zeros_like, sqrt, meshgrid, arange, concatenate, full, size, where
+	zeros_like, sqrt, meshgrid, arange, concatenate, full, size, where, diff, exp
 from numpy.typing import NDArray
 from scipy import integrate
 
@@ -14,10 +14,13 @@ plt.rc("font", size=12)
 
 k = 2*pi  # three full eyes in the simulation domain
 ω = 4*pi  # two full oscillations in 1s
-vth = 0.8*ω/k  # ensure a high gradient at the wave velocity
+v_thermal = 0.8*ω/k  # ensure a high gradient at the wave velocity
 g0 = .8  # wave amplitude
+
 x_grid = linspace(-1.5, 1.5, 361)  # normalized spacial coordinates
-v_grid = linspace(-0.6*ω/k, 2.1*ω/k, 201)  # set velocity bounds to see wave velocityu
+v_grid = linspace(-0.6*ω/k, 2.1*ω/k, 201)  # set velocity bounds to see wave velocity
+
+num_samples = 100_000
 
 
 def main():
@@ -28,7 +31,7 @@ def main():
 	frame_rate = 24
 	duration = 5
 
-	v0 = random.normal(0, vth, 100000)  # maxwellian inital distribution
+	v0 = random.normal(0, v_thermal, num_samples)  # maxwellian inital distribution
 	v0 = v0[(v0 > v_grid[0] - 0.1*ω/k) & (v0 < v_grid[-1] + 0.1*ω/k)]  # exclude particles off screen
 	x0 = random.uniform(x_grid[0], x_grid[-1], v0.size)  # randomize position as well
 
@@ -102,21 +105,23 @@ def plot_phase_space(x_grid_initial: NDArray[float], v_grid: NDArray[float], t: 
 		ax_E.set_yticks([])
 		ax_E.set_ylabel("Field", color="#672392")
 		ax_E.plot(x_grid, g0*sin(k*x_grid - ω*t[i]) if field_on else zeros_like(x_grid),
-		          color="#672392", zorder=20)
+		          color="#672392", linewidth=1.4, zorder=20)
 		ax_V.clear()
 		ax_V.set_yticks([])
 		ax_V.yaxis.set_label_position("right")
 		ax_V.set_ylabel("Potential", color="#bf5a09", rotation=-90, labelpad=12)
 		ax_V.plot(x_grid, g0/k*cos(k*x_grid - ω*t[i]) if field_on else zeros_like(x_grid),
-		          color="#e1762b", linestyle="dotted", zorder=10)
+		          color="#e1762b", linewidth=1.4, linestyle="dotted", zorder=10)
 
 		# plot the distribution function as a function of velocity (space-averaged)
 		ax_v.clear()
 		ax_v.set_xticks([])
 		ax_v.set_xlabel("Distribution", color="#215772")
 		f_v, v_bins = histogram(v[:, i], v_grid[0::4])
-		ax_v.fill_betweenx(repeat(v_bins, 2)[1:-1], 0, repeat(f_v, 2), color="#356884")
-		ax_v.set_xlim(0, v[:, i].size*3.6e-2)
+		ax_v.fill_betweenx(repeat(v_bins, 2)[1:-1], 0, repeat(f_v/diff(v_bins), 2), color="#457a8f")
+		ax_v.plot(num_samples/sqrt(2*pi)/v_thermal*exp(-(v_bins/v_thermal)**2/2), v_bins,
+		          color="k", linewidth=1.0, linestyle="dashed")
+		ax_v.set_xlim(0, 0.43*num_samples/v_thermal)
 
 		r_particle = (x_grid[1] - x_grid[0])*2.0
 		image = zeros((x_grid.size - 1, v_grid.size - 1))

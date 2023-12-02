@@ -21,7 +21,7 @@ g0 = .8  # wave amplitude
 x_grid = linspace(-1.5, 1.5, 361)  # normalized spacial coordinates
 v_grid = linspace(-0.6*ω/k, 2.1*ω/k, 201)  # set velocity bounds to see wave velocity
 
-num_samples = 100_000
+num_samples = 1_000_000
 frame_rate = 30
 duration = 8
 
@@ -124,16 +124,16 @@ def plot_phase_space(x_grid_initial: NDArray[float], v_grid: NDArray[float], t: 
 		ax_v.clear()
 		ax_v.set_xticks([])
 		ax_v.set_xlabel("Distribution", color="#215772")
-		f_v, v_bins = histogram(v[:, i], v_grid[0::4])
+		f_v, v_bins = histogram(v[:, i], v_grid[0::2])
 		ax_v.fill_betweenx(repeat(v_bins, 2)[1:-1], 0, repeat(f_v/diff(v_bins), 2), color="#61909d")
 		ax_v.plot(num_samples/sqrt(2*pi)/v_thermal*exp(-(v_bins/v_thermal)**2/2), v_bins,
 		          color="k", linewidth=1.0, linestyle="dashed")
 		ax_v.set_xlim(0, 0.43*num_samples/v_thermal)
 
-		r_particle = (x_grid[1] - x_grid[0])*2.0
+		r_particle = (x_grid[1] - x_grid[0])*1.5
 		image = zeros((x_grid.size - 1, v_grid.size - 1))
-		for dx in linspace(-r_particle, r_particle, 13):
-			for dy in linspace(-r_particle, r_particle, 13):
+		for dx in linspace(-r_particle, r_particle, 7):
+			for dy in linspace(-r_particle, r_particle, 7):
 				if hypot(dx, dy) < r_particle*1.1:
 					dv = dy/(x_grid[1] - x_grid[0])*(v_grid[1] - v_grid[0])
 					image += histogram2d(periodicize(x[:, i] + dx, x_grid[0], x_grid[-1]),
@@ -141,8 +141,9 @@ def plot_phase_space(x_grid_initial: NDArray[float], v_grid: NDArray[float], t: 
 		ax_image.clear()
 		ax_image.set_xlabel("Position")
 		ax_image.set_ylabel("Velocity", labelpad=-6 if field_on else 0)
+		lightening_modifier = 1.5 if trajectories else 1.0
 		ax_image.imshow(image.transpose(), extent=(x_grid[0], x_grid[-1], v_grid[0], v_grid[-1]),
-		                vmin=0, vmax=450 if trajectories else 300,
+		                vmin=0, vmax=num_samples*7.5e-4*lightening_modifier,
 		                cmap=colormap, aspect="auto", origin="lower")
 		ax_image.set_xlim(x_grid[0] + .21, x_grid[-1] - .21)
 		ax_image.xaxis.set_major_locator(ticker.MultipleLocator(0.5))

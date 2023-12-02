@@ -1,5 +1,5 @@
 from matplotlib import pyplot as plt
-from numpy import linspace, random, pi, zeros, histogram2d, hypot, sin, stack, ravel, cos, histogram, repeat
+from numpy import linspace, random, pi, zeros, histogram2d, hypot, sin, stack, ravel, cos, histogram, repeat, zeros_like
 from numpy.typing import NDArray
 from scipy import integrate
 
@@ -18,36 +18,43 @@ def main():
 
 	frame_rate = 24
 
-
 	v0 = random.normal(0, vth, 100000)  # maxwellian inital distribution
 	v0 = v0[(v0 > v_grid[0]*ω/k) & (v0 < v_grid[-1] + 0.1*ω/k)]  # exclude particles off screen
 	x0 = random.uniform(-1, 1, v0.size)  # randomize position as well
 
-	# solve with respect to time
-	def derivative(t, state):
-		x = state[0::2]
-		v = state[1::2]
-		dxdt = v
-		dvdt = g0*cos(k*x - ω*t)
-		return ravel(stack([dxdt, dvdt], axis=1))
-	solution = integrate.solve_ivp(derivative, t_span=(0, 4),
-	                               t_eval=linspace(0, 4, 4*frame_rate, endpoint=False),
-	                               y0=ravel(stack([x0, v0], axis=1)))
-	t = solution.t  # type: ignore
-	x = solution.y[0::2, :]  # type: ignore
-	v = solution.y[1::2, :]  # type: ignore
+	for field_on in [False, True]:
+		for wave_frame in [False, True]:
+			for trajectories in [False, True]:
 
-	# plot it
-	plot_phase_space(x_grid, v_grid, t, x, v)
-	plt.show()
+				if not field_on and wave_frame or trajectories:
+					continue  # skip these plots with uninteresting features
+
+				# solve with respect to time
+				def derivative(t, state):
+					x = state[0::2]
+					v = state[1::2]
+					dxdt = v
+					dvdt = g0*cos(k*x - ω*t) if field_on else zeros_like(v)
+					return ravel(stack([dxdt, dvdt], axis=1))
+				solution = integrate.solve_ivp(derivative, t_span=(0, 4),
+				                               t_eval=linspace(0, 4, 4*frame_rate, endpoint=False),
+				                               y0=ravel(stack([x0, v0], axis=1)))
+				t = solution.t  # type: ignore
+				x = solution.y[0::2, :]  # type: ignore
+				v = solution.y[1::2, :]  # type: ignore
+
+				# plot it
+				plot_phase_space(x_grid, v_grid, t, x, v, field_on, wave_frame, trajectories)
+				plt.show()
 
 
 def plot_phase_space(x_grid: NDArray[float], v_grid: NDArray[float], t: NDArray[float],
-                     x: NDArray[float], v: NDArray[float]):
+                     x: NDArray[float], v: NDArray[float],
+                     field_on: bool, wave_frame: bool, trajectories: bool):
 	fig, ((ax_E, space), (ax_image, ax_v)) = plt.subplots(
 		nrows=2, ncols=2, facecolor="none", sharex="col", sharey="row",
 		gridspec_kw=dict(
-			hspace=0, wspace=0, width_ratios=[4, 1], height_ratios=[1, 4])
+			hspace=0, wspace=0, width_ratios=[5, 1], height_ratios=[1, 5])
 	)
 	ax_V = ax_E.twinx()
 
@@ -58,12 +65,14 @@ def plot_phase_space(x_grid: NDArray[float], v_grid: NDArray[float], t: NDArray[
 		ax_E.clear()
 		ax_E.set_yticks([])
 		ax_E.set_ylabel("Field", color="#672392")
-		ax_E.plot(x_grid, g0*cos(k*x_grid - ω*t[i]), color="#672392", zorder=20)
+		ax_E.plot(x_grid, g0*cos(k*x_grid - ω*t[i]) if field_on else zeros_like(x_grid),
+		          color="#672392", zorder=20)
 		ax_V.clear()
 		ax_V.set_yticks([])
 		ax_V.yaxis.set_label_position("right")
 		ax_V.set_ylabel("Potential", color="#9a4504", rotation=-90, labelpad=11)
-		ax_V.plot(x_grid, g0/k*sin(k*x_grid - ω*t[i]), color="#e1762b", linestyle="dotted", zorder=10)
+		ax_V.plot(x_grid, g0/k*sin(k*x_grid - ω*t[i]) if field_on else zeros_like(x_grid),
+		          color="#e1762b", linestyle="dotted", zorder=10)
 		ax_E.set_zorder(ax_V.get_zorder()+1)
 		ax_E.set_frame_on(False)
 

@@ -23,7 +23,7 @@ v_grid = linspace(-0.6*ω/k, 2.1*ω/k, 201)  # set velocity bounds to see wave v
 
 num_samples = 100_000
 frame_rate = 30
-duration = 10
+duration = 8
 
 
 def main():
@@ -47,7 +47,7 @@ def main():
 			dvdt = g0*sin(k*x - ω*t) if field_on else zeros_like(v)
 			return ravel(stack([dxdt, dvdt], axis=1))
 		solution = integrate.solve_ivp(
-			derivative, t_span=(0, duration),
+			derivative, t_span=(0, duration - 1/frame_rate),
 			t_eval=linspace(0, duration, duration*frame_rate, endpoint=False),
 			y0=ravel(stack([x0, v0], axis=1)))
 		t = solution.t  # type: ignore
@@ -91,7 +91,7 @@ def plot_phase_space(x_grid_initial: NDArray[float], v_grid: NDArray[float], t: 
 	fig, ((ax_V, textbox), (ax_image, ax_v)) = plt.subplots(
 		nrows=2, ncols=2, facecolor="none", sharex="col", sharey="row",
 		gridspec_kw=dict(
-			left=.090, right=.992, bottom=.100, top=.989,
+			left=.095, right=.992, bottom=.100, top=.989,
 			hspace=0, wspace=0, width_ratios=[5, 1], height_ratios=[1, 4])
 	)
 	ax_E = ax_V.twinx()
@@ -104,7 +104,7 @@ def plot_phase_space(x_grid_initial: NDArray[float], v_grid: NDArray[float], t: 
 		# show the current time
 		textbox.clear()
 		textbox.axis("off")
-		textbox.text(.13, .95, f"$t$ = {t[i]:4.2f} s",
+		textbox.text(.23, .95, f"$t$ = {t[i]:3.1f} s",
 		             horizontalalignment="left", verticalalignment="top",
 		             transform=textbox.transAxes)
 
@@ -125,7 +125,7 @@ def plot_phase_space(x_grid_initial: NDArray[float], v_grid: NDArray[float], t: 
 		ax_v.set_xticks([])
 		ax_v.set_xlabel("Distribution", color="#215772")
 		f_v, v_bins = histogram(v[:, i], v_grid[0::4])
-		ax_v.fill_betweenx(repeat(v_bins, 2)[1:-1], 0, repeat(f_v/diff(v_bins), 2), color="#457a8f")
+		ax_v.fill_betweenx(repeat(v_bins, 2)[1:-1], 0, repeat(f_v/diff(v_bins), 2), color="#61909d")
 		ax_v.plot(num_samples/sqrt(2*pi)/v_thermal*exp(-(v_bins/v_thermal)**2/2), v_bins,
 		          color="k", linewidth=1.0, linestyle="dashed")
 		ax_v.set_xlim(0, 0.43*num_samples/v_thermal)

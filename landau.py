@@ -175,6 +175,7 @@ def periodicize(x: NDArray[float], minimum: float, maximum: float) -> NDArray[fl
 
 
 def make_gif(base_filename: str, num_frames: int, frame_rate: float):
+	# load each frame and put them in a list
 	frames = []
 	for i in range(num_frames):
 		frame = imread(f"{base_filename}_at_t{i:03d}.png")
@@ -182,6 +183,11 @@ def make_gif(base_filename: str, num_frames: int, frame_rate: float):
 		alpha = frame[:, :, 3, newaxis]/255.
 		frame = (rgb*alpha + 255*(1 - alpha)).astype(uint8) # remove transparency with a white background
 		frames.append(frame)
+	# also put a flash of white at the end if the image is transient
+	if "wave" in base_filename:
+		for i in range(int(frame_rate/10)):
+			frames.append(full(shape(frames[0]), 255, dtype=uint8))
+	# save it all as a GIF
 	mimsave(f"{base_filename}.gif", frames, fps=frame_rate)
 
 

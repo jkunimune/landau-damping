@@ -1,3 +1,5 @@
+from os import makedirs
+
 from matplotlib import pyplot as plt
 from numpy import linspace, random, pi, zeros, histogram2d, hypot, sin, stack, ravel, cos, histogram, repeat, \
 	zeros_like, sqrt, meshgrid, arange, concatenate, full, size, where
@@ -15,6 +17,7 @@ g0 = .4
 def main():
 
 	random.seed(0)
+	makedirs("output", exist_ok=True)
 
 	x_grid = linspace(-1, 1, 301)  # normalized spacial coordinates
 	v_grid = linspace(-0.4*ω/k, 2.0*ω/k, 201)  # set velocity bounds to see wave velocityu
@@ -57,12 +60,12 @@ def main():
 def plot_phase_space(x_grid_initial: NDArray[float], v_grid: NDArray[float], t: NDArray[float],
                      x: NDArray[float], v: NDArray[float],
                      field_on: bool, wave_frame: bool, trajectories: bool):
-	fig, ((ax_E, space), (ax_image, ax_v)) = plt.subplots(
+	fig, ((ax_V, space), (ax_image, ax_v)) = plt.subplots(
 		nrows=2, ncols=2, facecolor="none", sharex="col", sharey="row",
 		gridspec_kw=dict(
 			hspace=0, wspace=0, width_ratios=[5, 1], height_ratios=[1, 5])
 	)
-	ax_V = ax_E.twinx()
+	ax_E = ax_V.twinx()
 
 	space.axis("off")
 
@@ -82,8 +85,6 @@ def plot_phase_space(x_grid_initial: NDArray[float], v_grid: NDArray[float], t: 
 		ax_V.set_ylabel("Potential", color="#9a4504", rotation=-90, labelpad=11)
 		ax_V.plot(x_grid, g0/k*cos(k*x_grid - ω*t[i]) if field_on else zeros_like(x_grid),
 		          color="#e1762b", linestyle="dotted", zorder=10)
-		ax_E.set_zorder(ax_V.get_zorder()+1)
-		ax_E.set_frame_on(False)
 
 		# plot the distribution function as a function of velocity (space-averaged)
 		ax_v.clear()
@@ -118,6 +119,17 @@ def plot_phase_space(x_grid_initial: NDArray[float], v_grid: NDArray[float], t: 
 			                 colors="k")
 
 		plt.tight_layout()
+		filename = "output/distribution"
+		if wave_frame:
+			filename += "_stationary"
+		if field_on:
+			filename += "_wave"
+		else:
+			filename += "_ballistic"
+		if trajectories:
+			filename += "_with_trajectories"
+		filename += f"_at_{t[i]:04.2f}s.png"
+		plt.savefig(filename, dpi=150)
 		plt.pause(0.05)
 	plt.show()
 

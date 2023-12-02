@@ -34,7 +34,7 @@ def main():
 					x = state[0::2]
 					v = state[1::2]
 					dxdt = v
-					dvdt = g0*cos(k*x - ω*t) if field_on else zeros_like(v)
+					dvdt = g0*sin(k*x - ω*t) if field_on else zeros_like(v)
 					return ravel(stack([dxdt, dvdt], axis=1))
 				solution = integrate.solve_ivp(derivative, t_span=(0, 4),
 				                               t_eval=linspace(0, 4, 4*frame_rate, endpoint=False),
@@ -48,7 +48,7 @@ def main():
 				plt.show()
 
 
-def plot_phase_space(x_grid: NDArray[float], v_grid: NDArray[float], t: NDArray[float],
+def plot_phase_space(x_grid_initial: NDArray[float], v_grid: NDArray[float], t: NDArray[float],
                      x: NDArray[float], v: NDArray[float],
                      field_on: bool, wave_frame: bool, trajectories: bool):
 	fig, ((ax_E, space), (ax_image, ax_v)) = plt.subplots(
@@ -61,17 +61,20 @@ def plot_phase_space(x_grid: NDArray[float], v_grid: NDArray[float], t: NDArray[
 	space.axis("off")
 
 	for i in range(len(t)):
+		# move with the wave (or not)
+		x_grid = x_grid_initial + ω/k*t[i] if wave_frame else x_grid_initial
+
 		# plot the electric field and potential as functions of space
 		ax_E.clear()
 		ax_E.set_yticks([])
 		ax_E.set_ylabel("Field", color="#672392")
-		ax_E.plot(x_grid, g0*cos(k*x_grid - ω*t[i]) if field_on else zeros_like(x_grid),
+		ax_E.plot(x_grid, g0*sin(k*x_grid - ω*t[i]) if field_on else zeros_like(x_grid),
 		          color="#672392", zorder=20)
 		ax_V.clear()
 		ax_V.set_yticks([])
 		ax_V.yaxis.set_label_position("right")
 		ax_V.set_ylabel("Potential", color="#9a4504", rotation=-90, labelpad=11)
-		ax_V.plot(x_grid, g0/k*sin(k*x_grid - ω*t[i]) if field_on else zeros_like(x_grid),
+		ax_V.plot(x_grid, g0/k*cos(k*x_grid - ω*t[i]) if field_on else zeros_like(x_grid),
 		          color="#e1762b", linestyle="dotted", zorder=10)
 		ax_E.set_zorder(ax_V.get_zorder()+1)
 		ax_E.set_frame_on(False)
@@ -90,7 +93,7 @@ def plot_phase_space(x_grid: NDArray[float], v_grid: NDArray[float], t: NDArray[
 			for dy in linspace(-r_particle, r_particle, 9):
 				if hypot(dx, dy) < r_particle:
 					dv = dy/(x_grid[1] - x_grid[0])*(v_grid[1] - v_grid[0])
-					image += histogram2d(periodicize(x[:, i] + dx, -1, 1),
+					image += histogram2d(periodicize(x[:, i] + dx, x_grid[0], x_grid[-1]),
 					                     v[:, i] + dv, bins=(x_grid, v_grid))[0]
 		ax_image.clear()
 		ax_image.set_xlabel("Position")

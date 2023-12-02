@@ -2,7 +2,7 @@ from os import makedirs
 
 from imageio.v2 import mimsave
 from imageio.v3 import imread
-from matplotlib import pyplot as plt
+from matplotlib import pyplot as plt, ticker
 from numpy import linspace, random, pi, zeros, histogram2d, hypot, sin, stack, ravel, cos, histogram, repeat, \
 	zeros_like, sqrt, meshgrid, arange, concatenate, full, size, where
 from numpy.typing import NDArray
@@ -10,10 +10,14 @@ from scipy import integrate
 
 from colormap import colormap
 
-k = 3*pi  # three eyes in frame at any time
+plt.rc("font", size=12)
+
+k = 2*pi  # three full eyes in the simulation domain
 ω = 4*pi  # two full oscillations in 1s
-vth = 0.7*ω/k  # ensure a high gradient at the wave velocity
-g0 = .4
+vth = 0.8*ω/k  # ensure a high gradient at the wave velocity
+g0 = .8  # wave amplitude
+x_grid = linspace(-1.5, 1.5, 361)  # normalized spacial coordinates
+v_grid = linspace(-0.6*ω/k, 2.1*ω/k, 201)  # set velocity bounds to see wave velocityu
 
 
 def main():
@@ -21,15 +25,12 @@ def main():
 	random.seed(0)
 	makedirs("output", exist_ok=True)
 
-	x_grid = linspace(-1, 1, 301)  # normalized spacial coordinates
-	v_grid = linspace(-0.4*ω/k, 2.0*ω/k, 201)  # set velocity bounds to see wave velocityu
-
 	frame_rate = 24
 	duration = 5
 
-	v0 = random.normal(0, vth, 80000)  # maxwellian inital distribution
-	v0 = v0[(v0 > v_grid[0]*ω/k) & (v0 < v_grid[-1] + 0.1*ω/k)]  # exclude particles off screen
-	x0 = random.uniform(-1, 1, v0.size)  # randomize position as well
+	v0 = random.normal(0, vth, 100000)  # maxwellian inital distribution
+	v0 = v0[(v0 > v_grid[0] - 0.1*ω/k) & (v0 < v_grid[-1] + 0.1*ω/k)]  # exclude particles off screen
+	x0 = random.uniform(x_grid[0], x_grid[-1], v0.size)  # randomize position as well
 
 	for field_on in [True, False]:
 
@@ -84,9 +85,11 @@ def plot_phase_space(x_grid_initial: NDArray[float], v_grid: NDArray[float], t: 
 	fig, ((ax_V, space), (ax_image, ax_v)) = plt.subplots(
 		nrows=2, ncols=2, facecolor="none", sharex="col", sharey="row",
 		gridspec_kw=dict(
-			hspace=0, wspace=0, width_ratios=[5, 1], height_ratios=[1, 5])
+			left=.11, right=.98, bottom=.12, top=.97,
+			hspace=0, wspace=0, width_ratios=[5, 1], height_ratios=[1, 4])
 	)
 	ax_E = ax_V.twinx()
+	ax_image.set_zorder(10)
 
 	space.axis("off")
 
@@ -103,7 +106,7 @@ def plot_phase_space(x_grid_initial: NDArray[float], v_grid: NDArray[float], t: 
 		ax_V.clear()
 		ax_V.set_yticks([])
 		ax_V.yaxis.set_label_position("right")
-		ax_V.set_ylabel("Potential", color="#9a4504", rotation=-90, labelpad=11)
+		ax_V.set_ylabel("Potential", color="#bf5a09", rotation=-90, labelpad=12)
 		ax_V.plot(x_grid, g0/k*cos(k*x_grid - ω*t[i]) if field_on else zeros_like(x_grid),
 		          color="#e1762b", linestyle="dotted", zorder=10)
 
@@ -113,7 +116,7 @@ def plot_phase_space(x_grid_initial: NDArray[float], v_grid: NDArray[float], t: 
 		ax_v.set_xlabel("Distribution", color="#215772")
 		f_v, v_bins = histogram(v[:, i], v_grid[0::4])
 		ax_v.fill_betweenx(repeat(v_bins, 2)[1:-1], 0, repeat(f_v, 2), color="#356884")
-		ax_v.set_xlim(0, v[:, i].size*3.8e-2)
+		ax_v.set_xlim(0, v[:, i].size*3.6e-2)
 
 		r_particle = (x_grid[1] - x_grid[0])*2.0
 		image = zeros((x_grid.size - 1, v_grid.size - 1))
@@ -125,10 +128,18 @@ def plot_phase_space(x_grid_initial: NDArray[float], v_grid: NDArray[float], t: 
 					                     v[:, i] + dv, bins=(x_grid, v_grid))[0]
 		ax_image.clear()
 		ax_image.set_xlabel("Position")
-		ax_image.set_ylabel("Velocity")
+		ax_image.set_ylabel("Velocity", labelpad=-6 if field_on else 0)
 		ax_image.imshow(image.transpose(), extent=(x_grid[0], x_grid[-1], v_grid[0], v_grid[-1]),
 		                vmin=0, vmax=450 if trajectories else 300,
 		                cmap=colormap, aspect="auto", origin="lower")
+		ax_image.set_xlim(x_grid[0] + .21, x_grid[-1] - .21)
+		ax_image.xaxis.set_major_locator(ticker.MultipleLocator(0.5))
+		if field_on:
+			ax_image.yaxis.set_major_locator(ticker.MultipleLocator(0.5*ω/k))
+			ax_image.yaxis.set_major_formatter(lambda v, _: format_as_fraction(v/(ω/k), "ω", "k"))
+			ax_image.tick_params(axis="y", which="major", labelsize=14)
+		else:
+			ax_image.yaxis.set_major_locator(ticker.MultipleLocator(1.0))
 
 		if trajectories:
 			X_grid, V_grid = meshgrid(x_grid, v_grid)
@@ -138,8 +149,9 @@ def plot_phase_space(x_grid_initial: NDArray[float], v_grid: NDArray[float], t: 
 			                 sqrt((V_grid - ω/k)**2 + 2*g0/k*(cos(k*X_grid - ω*t[i]) + 1)),
 			                 levels=v_plot, linewidths=where(trajectory_type == 1, 1.4, 0.7),
 			                 colors="k")
+		elif wave_frame:
+			ax_image.axhline(ω/k, color="k", linewidth=1.0, linestyle="dashed")
 
-		fig.tight_layout()
 		fig.savefig(filename_format.format(i), dpi=150)
 		plt.pause(0.05)
 	plt.close(fig)
@@ -154,6 +166,21 @@ def make_gif(base_filename: str, num_frames: int, frame_rate: float):
 	for i in range(num_frames):
 		frames.append(imread(f"{base_filename}_at_t{i:03d}.png"))
 	mimsave(f"{base_filename}.gif", frames, fps=frame_rate)
+
+
+def format_as_fraction(coefficient: float, numerator: str, denominator: str):
+	if coefficient == 0:
+		return "$0$"
+	if coefficient < 0:
+		return f"$-{format_as_fraction(abs(coefficient), numerator, denominator)[1:]}"
+	for base in range(1, 10):
+		if coefficient % (1/base) < 1e-10:
+			if round(coefficient*base) != 1:
+				numerator = f"{round(coefficient*base):d} {numerator}"
+			if base != 1:
+				denominator = f"{base:d} {denominator}"
+			return f"$\\frac{{{numerator}}}{{{denominator}}}$"
+	raise ValueError(f"couldn't find a good fraction representation of {coefficient}.")
 
 
 if __name__ == "__main__":

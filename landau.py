@@ -1,5 +1,7 @@
 from os import makedirs
 
+from imageio.v2 import mimsave
+from imageio.v3 import imread
 from matplotlib import pyplot as plt
 from numpy import linspace, random, pi, zeros, histogram2d, hypot, sin, stack, ravel, cos, histogram, repeat, \
 	zeros_like, sqrt, meshgrid, arange, concatenate, full, size, where
@@ -9,7 +11,7 @@ from scipy import integrate
 from colormap import colormap
 
 k = 3*pi  # three eyes in frame at any time
-ω = 4*pi  # two full oscillations in a 1s video
+ω = 4*pi  # two full oscillations in 1s
 vth = 0.7*ω/k  # ensure a high gradient at the wave velocity
 g0 = .4
 
@@ -23,6 +25,7 @@ def main():
 	v_grid = linspace(-0.4*ω/k, 2.0*ω/k, 201)  # set velocity bounds to see wave velocityu
 
 	frame_rate = 24
+	duration = 5
 
 	v0 = random.normal(0, vth, 80000)  # maxwellian inital distribution
 	v0 = v0[(v0 > v_grid[0]*ω/k) & (v0 < v_grid[-1] + 0.1*ω/k)]  # exclude particles off screen
@@ -37,9 +40,10 @@ def main():
 			dxdt = v
 			dvdt = g0*sin(k*x - ω*t) if field_on else zeros_like(v)
 			return ravel(stack([dxdt, dvdt], axis=1))
-		solution = integrate.solve_ivp(derivative, t_span=(0, 4),
-		                               t_eval=linspace(0, 4, 4*frame_rate, endpoint=False),
-		                               y0=ravel(stack([x0, v0], axis=1)))
+		solution = integrate.solve_ivp(
+			derivative, t_span=(0, duration),
+			t_eval=linspace(0, duration, duration*frame_rate, endpoint=False),
+			y0=ravel(stack([x0, v0], axis=1)))
 		t = solution.t  # type: ignore
 		x = solution.y[0::2, :]  # type: ignore
 		v = solution.y[1::2, :]  # type: ignore
@@ -52,14 +56,31 @@ def main():
 				if trajectories and not wave_frame:
 					continue  # trajectories are meaningless unless the field is static
 
-				# plot it
-				plot_phase_space(x_grid, v_grid, t, x, v, field_on, wave_frame, trajectories)
+				# choose the filename
+				filename = "output/distribution"
+				if wave_frame:
+					filename += "_stationary"
+				if field_on:
+					filename += "_wave"
+				else:
+					filename += "_ballistic"
+				if trajectories:
+					filename += "_with_trajectories"
+
+				# plot it all
+				plot_phase_space(x_grid, v_grid, t, x, v, field_on, wave_frame, trajectories,
+				                 filename + "_at_t{:03d}.png")
+
+				# combine the images into a single animated image
+				make_gif(filename, len(t), frame_rate)
+
 				plt.show()
 
 
 def plot_phase_space(x_grid_initial: NDArray[float], v_grid: NDArray[float], t: NDArray[float],
                      x: NDArray[float], v: NDArray[float],
-                     field_on: bool, wave_frame: bool, trajectories: bool):
+                     field_on: bool, wave_frame: bool, trajectories: bool,
+                     filename_format: str):
 	fig, ((ax_V, space), (ax_image, ax_v)) = plt.subplots(
 		nrows=2, ncols=2, facecolor="none", sharex="col", sharey="row",
 		gridspec_kw=dict(
@@ -118,24 +139,21 @@ def plot_phase_space(x_grid_initial: NDArray[float], v_grid: NDArray[float], t: 
 			                 levels=v_plot, linewidths=where(trajectory_type == 1, 1.4, 0.7),
 			                 colors="k")
 
-		plt.tight_layout()
-		filename = "output/distribution"
-		if wave_frame:
-			filename += "_stationary"
-		if field_on:
-			filename += "_wave"
-		else:
-			filename += "_ballistic"
-		if trajectories:
-			filename += "_with_trajectories"
-		filename += f"_at_{t[i]:04.2f}s.png"
-		plt.savefig(filename, dpi=150)
+		fig.tight_layout()
+		fig.savefig(filename_format.format(i), dpi=150)
 		plt.pause(0.05)
-	plt.show()
+	plt.close(fig)
 
 
 def periodicize(x: NDArray[float], minimum: float, maximum: float) -> NDArray[float]:
 	return minimum + (x - minimum) % (maximum - minimum)
+
+
+def make_gif(base_filename: str, num_frames: int, frame_rate: float):
+	frames = []
+	for i in range(num_frames):
+		frames.append(imread(f"{base_filename}_at_t{i:03d}.png"))
+	mimsave(f"{base_filename}.gif", frames, fps=frame_rate)
 
 
 if __name__ == "__main__":

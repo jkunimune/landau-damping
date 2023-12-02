@@ -85,20 +85,25 @@ def plot_phase_space(x_grid_initial: NDArray[float], v_grid: NDArray[float], t: 
                      x: NDArray[float], v: NDArray[float],
                      field_on: bool, wave_frame: bool, trajectories: bool,
                      filename_format: str):
-	fig, ((ax_V, space), (ax_image, ax_v)) = plt.subplots(
+	fig, ((ax_V, textbox), (ax_image, ax_v)) = plt.subplots(
 		nrows=2, ncols=2, facecolor="none", sharex="col", sharey="row",
 		gridspec_kw=dict(
-			left=.11, right=.98, bottom=.12, top=.97,
+			left=.090, right=.992, bottom=.100, top=.989,
 			hspace=0, wspace=0, width_ratios=[5, 1], height_ratios=[1, 4])
 	)
 	ax_E = ax_V.twinx()
 	ax_image.set_zorder(10)
 
-	space.axis("off")
-
 	for i in range(len(t)):
 		# move with the wave (or not)
 		x_grid = x_grid_initial + ω/k*t[i] if wave_frame else x_grid_initial
+
+		# show the current time
+		textbox.clear()
+		textbox.axis("off")
+		textbox.text(1, 1, f"$t = {t[i]:4.2f}\\,\\mathrm{{s}}$",
+		             horizontalalignment="right", verticalalignment="top",
+		             transform=textbox.transAxes)
 
 		# plot the electric field and potential as functions of space
 		ax_E.clear()

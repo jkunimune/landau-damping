@@ -8,8 +8,8 @@ from colormap import colormap
 
 k = 3*pi  # three eyes in frame at any time
 ω = 4*pi  # two full oscillations in a 1s video
-vth = 0.5*ω/k  # ensure a high gradient at the wave velocity
-g0 = .1
+vth = 0.7*ω/k  # ensure a high gradient at the wave velocity
+g0 = .4
 
 
 def main():
@@ -17,11 +17,11 @@ def main():
 	random.seed(0)
 
 	x_grid = linspace(-1, 1, 301)  # normalized spacial coordinates
-	v_grid = linspace(-0.4*ω/k, 1.8*ω/k, 201)  # set velocity bounds to see wave velocityu
+	v_grid = linspace(-0.4*ω/k, 2.0*ω/k, 201)  # set velocity bounds to see wave velocityu
 
 	frame_rate = 24
 
-	v0 = random.normal(0, vth, 100000)  # maxwellian inital distribution
+	v0 = random.normal(0, vth, 80000)  # maxwellian inital distribution
 	v0 = v0[(v0 > v_grid[0]*ω/k) & (v0 < v_grid[-1] + 0.1*ω/k)]  # exclude particles off screen
 	x0 = random.uniform(-1, 1, v0.size)  # randomize position as well
 
@@ -89,15 +89,15 @@ def plot_phase_space(x_grid_initial: NDArray[float], v_grid: NDArray[float], t: 
 		ax_v.clear()
 		ax_v.set_xticks([])
 		ax_v.set_xlabel("Distribution", color="#215772")
-		f_v, v_bins = histogram(v[:, i], v_grid[0::3])
+		f_v, v_bins = histogram(v[:, i], v_grid[0::4])
 		ax_v.fill_betweenx(repeat(v_bins, 2)[1:-1], 0, repeat(f_v, 2), color="#356884")
-		ax_v.set_xlim(0, v[:, i].size*3.2e-2)
+		ax_v.set_xlim(0, v[:, i].size*3.8e-2)
 
 		r_particle = (x_grid[1] - x_grid[0])*2.0
 		image = zeros((x_grid.size - 1, v_grid.size - 1))
-		for dx in linspace(-r_particle, r_particle, 9):
-			for dy in linspace(-r_particle, r_particle, 9):
-				if hypot(dx, dy) < r_particle:
+		for dx in linspace(-r_particle, r_particle, 13):
+			for dy in linspace(-r_particle, r_particle, 13):
+				if hypot(dx, dy) < r_particle*1.1:
 					dv = dy/(x_grid[1] - x_grid[0])*(v_grid[1] - v_grid[0])
 					image += histogram2d(periodicize(x[:, i] + dx, x_grid[0], x_grid[-1]),
 					                     v[:, i] + dv, bins=(x_grid, v_grid))[0]
@@ -105,7 +105,7 @@ def plot_phase_space(x_grid_initial: NDArray[float], v_grid: NDArray[float], t: 
 		ax_image.set_xlabel("Position")
 		ax_image.set_ylabel("Velocity")
 		ax_image.imshow(image.transpose(), extent=(x_grid[0], x_grid[-1], v_grid[0], v_grid[-1]),
-		                vmin=0, vmax=270 if trajectories else 180,
+		                vmin=0, vmax=450 if trajectories else 300,
 		                cmap=colormap, aspect="auto", origin="lower")
 
 		if trajectories:
@@ -113,7 +113,7 @@ def plot_phase_space(x_grid_initial: NDArray[float], v_grid: NDArray[float], t: 
 			v_plot = arange(1/5, 10, 2/5)*2*sqrt(g0/k)
 			trajectory_type = concatenate([[0, 0, 1], full(size(v_plot) - 3, 2)])  # 0: trapped, 1: separatrix, 2: passing
 			ax_image.contour(x_grid, v_grid,
-			                 sqrt((V_grid - ω/k)**2 + 2*g0/k*(sin(k*X_grid - ω*t[i]) + 1)),
+			                 sqrt((V_grid - ω/k)**2 + 2*g0/k*(cos(k*X_grid - ω*t[i]) + 1)),
 			                 levels=v_plot, linewidths=where(trajectory_type == 1, 1.4, 0.7),
 			                 colors="k")
 

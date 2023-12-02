@@ -13,6 +13,8 @@ g0 = .1
 
 def main():
 
+	random.seed(0)
+
 	x_grid = linspace(-1, 1, 301)  # normalized spacial coordinates
 	v_grid = linspace(-0.4*ω/k, 1.8*ω/k, 201)  # set velocity bounds to see wave velocityu
 
@@ -22,26 +24,27 @@ def main():
 	v0 = v0[(v0 > v_grid[0]*ω/k) & (v0 < v_grid[-1] + 0.1*ω/k)]  # exclude particles off screen
 	x0 = random.uniform(-1, 1, v0.size)  # randomize position as well
 
-	for field_on in [False, True]:
-		for wave_frame in [False, True]:
-			for trajectories in [False, True]:
+	for field_on in [True, False]:
+
+		# solve with respect to time
+		def derivative(t, state):
+			x = state[0::2]
+			v = state[1::2]
+			dxdt = v
+			dvdt = g0*sin(k*x - ω*t) if field_on else zeros_like(v)
+			return ravel(stack([dxdt, dvdt], axis=1))
+		solution = integrate.solve_ivp(derivative, t_span=(0, 4),
+		                               t_eval=linspace(0, 4, 4*frame_rate, endpoint=False),
+		                               y0=ravel(stack([x0, v0], axis=1)))
+		t = solution.t  # type: ignore
+		x = solution.y[0::2, :]  # type: ignore
+		v = solution.y[1::2, :]  # type: ignore
+
+		for wave_frame in [True, False]:
+			for trajectories in [True, False]:
 
 				if not field_on and wave_frame or trajectories:
 					continue  # skip these plots with uninteresting features
-
-				# solve with respect to time
-				def derivative(t, state):
-					x = state[0::2]
-					v = state[1::2]
-					dxdt = v
-					dvdt = g0*sin(k*x - ω*t) if field_on else zeros_like(v)
-					return ravel(stack([dxdt, dvdt], axis=1))
-				solution = integrate.solve_ivp(derivative, t_span=(0, 4),
-				                               t_eval=linspace(0, 4, 4*frame_rate, endpoint=False),
-				                               y0=ravel(stack([x0, v0], axis=1)))
-				t = solution.t  # type: ignore
-				x = solution.y[0::2, :]  # type: ignore
-				v = solution.y[1::2, :]  # type: ignore
 
 				# plot it
 				plot_phase_space(x_grid, v_grid, t, x, v, field_on, wave_frame, trajectories)

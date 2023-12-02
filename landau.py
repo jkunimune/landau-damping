@@ -1,5 +1,6 @@
 from matplotlib import pyplot as plt
-from numpy import linspace, random, pi, zeros, histogram2d, hypot, sin, stack, ravel, cos, histogram, repeat, zeros_like
+from numpy import linspace, random, pi, zeros, histogram2d, hypot, sin, stack, ravel, cos, histogram, repeat, \
+	zeros_like, sqrt, meshgrid, arange, concatenate, full, size, where
 from numpy.typing import NDArray
 from scipy import integrate
 
@@ -43,8 +44,10 @@ def main():
 		for wave_frame in [True, False]:
 			for trajectories in [True, False]:
 
-				if not field_on and wave_frame or trajectories:
-					continue  # skip these plots with uninteresting features
+				if wave_frame and not field_on:
+					continue  # don't do the wave frame unless there's a wave
+				if trajectories and not wave_frame:
+					continue  # trajectories are meaningless unless the field is static
 
 				# plot it
 				plot_phase_space(x_grid, v_grid, t, x, v, field_on, wave_frame, trajectories)
@@ -102,8 +105,18 @@ def plot_phase_space(x_grid_initial: NDArray[float], v_grid: NDArray[float], t: 
 		ax_image.set_xlabel("Position")
 		ax_image.set_ylabel("Velocity")
 		ax_image.imshow(image.transpose(), extent=(x_grid[0], x_grid[-1], v_grid[0], v_grid[-1]),
-		                vmin=0, vmax=180, aspect="auto",
-		                origin="lower", cmap=colormap)
+		                vmin=0, vmax=270 if trajectories else 180,
+		                cmap=colormap, aspect="auto", origin="lower")
+
+		if trajectories:
+			X_grid, V_grid = meshgrid(x_grid, v_grid)
+			v_plot = arange(1/5, 10, 2/5)*2*sqrt(g0/k)
+			trajectory_type = concatenate([[0, 0, 1], full(size(v_plot) - 3, 2)])  # 0: trapped, 1: separatrix, 2: passing
+			ax_image.contour(x_grid, v_grid,
+			                 sqrt((V_grid - ω/k)**2 + 2*g0/k*(sin(k*X_grid - ω*t[i]) + 1)),
+			                 levels=v_plot, linewidths=where(trajectory_type == 1, 1.4, 0.7),
+			                 colors="k")
+
 		plt.tight_layout()
 		plt.pause(0.05)
 	plt.show()

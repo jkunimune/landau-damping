@@ -105,8 +105,8 @@ def plot_roller_coaster(x_grid_initial: NDArray[float], t: NDArray[float],
 
 	# remove the transient stuff at the beginning
 	t = t[num_timesteps_to_skip:]
-	x = x[num_timesteps_to_skip:]
-	v = v[num_timesteps_to_skip:]
+	x = x[:, num_timesteps_to_skip:]
+	v = v[:, num_timesteps_to_skip:]
 
 	# calculate the average speed of each passing particle
 	v_average = (x[:, -1] - x[:, 0])/(t[-1] - t[0])
@@ -126,10 +126,11 @@ def plot_roller_coaster(x_grid_initial: NDArray[float], t: NDArray[float],
 	# choose four exempletive points (there are so many at least a few should meet our requirements)
 	domain_width = x_grid_initial[-1] - x_grid_initial[0]
 	run_length = 2.1*T_fundamental
-	j_A = argmin(abs(period - run_length))
-	j_B = argmin(abs(period - run_length/2))
-	j_C = argmin(abs(v_average - domain_width/run_length))
-	j_D = argmin(abs(v_average - 2*domain_width/run_length))
+	x_final_relative = x[:, -1] - ω/k*t[-1]
+	j_A = argmin(where((x_final_relative > 0) & (x_final_relative < 1), abs(period - run_length), inf))
+	j_B = argmin(where((x_final_relative > -1) & (x_final_relative < 0), abs(period - run_length/2), inf))
+	j_C = argmin(abs(v_average - (ω/k + domain_width/run_length)))
+	j_D = argmin(abs(v_average - (ω/k - 2*domain_width/run_length)))
 
 	# pare down the data
 	t_end = t_start + run_length

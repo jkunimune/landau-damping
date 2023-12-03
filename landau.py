@@ -138,7 +138,7 @@ def plot_roller_coaster(x_grid_initial: NDArray[float], t: NDArray[float],
 	assert num_timesteps_to_plot <= shape(x)[1]
 	x = x[[j_A, j_B, j_C, j_D], :num_timesteps_to_plot]
 
-	fig = plt.figure(facecolor="none", figsize=(6, 2))
+	fig = plt.figure(facecolor="none", figsize=(7, 1.5))
 	ax = fig.subplots()
 	for i in range(num_timesteps_to_plot):
 		# move with the wave
@@ -147,16 +147,16 @@ def plot_roller_coaster(x_grid_initial: NDArray[float], t: NDArray[float],
 		ф = g0*cos(k*x_grid - ω*t[i])/k
 		# plot the potential
 		ax.clear()
-		ax.plot(x_grid, ф, color="#e1762b", linewidth=1.4, linestyle="solid", zorder=10)
+		ax.plot(x_grid, ф, color="#e1762b", linewidth=1.4, linestyle="dotted", zorder=10)
 		# plot each point
 		for j in range(shape(x)[0]):
 			ax.scatter(periodicize(x[j, i], x_grid[0], x_grid[-1]),
 			           g0*cos(k*x[j, i] - ω*t[i])/k,
-			           s=20,
+			           s=100,
 			           color=["#125bbc", "#266c01", "#9b4403", "#ae226a"][j],
 			           zorder=20 + j)
 
-		ax.set_xlim(-1.2 + ω/k*t[i], 1.2 + ω/k*t[i])
+		ax.set_xlim(x_grid[0] + .21, x_grid[-1] - .21)
 		ax.set_ylim(-1.2*g0/k, 1.2*g0/k)
 		ax.set_xticks([])
 		ax.set_yticks([])

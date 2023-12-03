@@ -20,7 +20,7 @@ k = 2*pi  # three full eyes in the simulation domain
 ω = 4*pi  # two full oscillations in 1s
 g0 = .8  # wave amplitude
 t_on = 1.0  # amount of time before wave appears
-Δt_on = 0.10  # amount of time it takes wave to ramp up
+Δt_on = 0.07  # amount of time it takes wave to ramp up
 
 v_thermal = 0.8*ω/k  # ensure a high gradient at the wave velocity
 
@@ -28,8 +28,8 @@ x_grid = linspace(-1.5, 1.5, 361)  # normalized spacial coordinates
 v_grid = linspace(-0.6*ω/k, 2.1*ω/k, 201)  # set velocity bounds to see wave velocity
 
 num_samples = 1_000_000
-frame_rate = 15
 duration = Δt_on + 8.0
+frame_rate = 24
 
 
 def main():
@@ -162,7 +162,7 @@ def plot_roller_coaster(x_grid_initial: NDArray[float], t: NDArray[float],
 		ax.set_yticks([])
 
 		fig.tight_layout()
-		fig.savefig(filename_format.format(i), dpi=75)
+		fig.savefig(filename_format.format(i), dpi=100)
 		plt.pause(0.05)
 
 	plt.close(fig)
@@ -206,7 +206,7 @@ def plot_phase_space(x_grid_initial: NDArray[float], v_grid: NDArray[float], t: 
 		          color="#672392", linewidth=1.4, zorder=20)
 		ax_V.clear()
 		ax_V.set_yticks([])
-		ax_V.set_ylabel("Potential", color="#ce661a", labelpad=17)
+		ax_V.set_ylabel("Potential", color="#e1762b", labelpad=17)
 		ax_V.set_ylim(-1.4*g0/k, 1.4*g0/k)
 		ax_V.plot(x_grid, ф if field_on else zeros_like(x_grid),
 		          color="#e1762b", linewidth=1.4, linestyle="dotted", zorder=10)
@@ -214,7 +214,7 @@ def plot_phase_space(x_grid_initial: NDArray[float], v_grid: NDArray[float], t: 
 		# plot the distribution function as a function of velocity (space-averaged)
 		ax_v.clear()
 		ax_v.set_xticks([])
-		ax_v.set_xlabel("Distribution", color="#215772")
+		ax_v.set_xlabel("Distribution", color="#61909d")
 		f_v, v_bins = histogram(v[:, i], v_grid[0::2])
 		ax_v.fill_betweenx(repeat(v_bins, 2)[1:-1], 0, repeat(f_v/diff(v_bins), 2), color="#61909d")
 		ax_v.plot(num_samples/sqrt(2*pi)/v_thermal*exp(-(v_bins/v_thermal)**2/2), v_bins,
@@ -265,7 +265,7 @@ def plot_phase_space(x_grid_initial: NDArray[float], v_grid: NDArray[float], t: 
 		elif wave_frame:
 			ax_image.axhline(ω/k, color="k", linewidth=1.0, linestyle="dashed")
 
-		fig.savefig(filename_format.format(i), dpi=75)
+		fig.savefig(filename_format.format(i), dpi=100)
 		plt.pause(0.05)
 	plt.close(fig)
 

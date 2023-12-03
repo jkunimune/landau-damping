@@ -6,7 +6,8 @@ from imageio.v2 import mimsave
 from imageio.v3 import imread
 from matplotlib import pyplot as plt, ticker
 from numpy import linspace, random, pi, zeros, histogram2d, hypot, sin, stack, ravel, cos, histogram, repeat, \
-	zeros_like, sqrt, meshgrid, arange, concatenate, full, size, where, diff, exp, newaxis, uint8, shape, floor
+	zeros_like, sqrt, meshgrid, arange, concatenate, full, size, where, diff, exp, newaxis, uint8, shape, floor, \
+	nonzero, interp, empty, argmin, inf
 from numpy.typing import NDArray
 from scipy import integrate
 from scipy.special import erf
@@ -58,6 +59,12 @@ def main():
 		x = solution.y[0::2, :]  # type: ignore
 		v = solution.y[1::2, :]  # type: ignore
 
+		# plot a few electrons in 1D
+		if field_on:
+			logging.info(f"generating output/roller_coaster.gif...")
+			num_frames = plot_roller_coaster(x_grid, t, x, v, "output/roller_coaster_t{:03d}.png")
+			make_gif("output/roller_coaster", num_frames, frame_rate)
+
 		for wave_frame in [True, False]:
 			for trajectories in [True, False]:
 
@@ -78,14 +85,87 @@ def main():
 					filename += "_with_trajectories"
 				logging.info(f"generating {filename}.gif...")
 
-				# plot it all
+				# plot all electrons in 2D
 				plot_phase_space(x_grid, v_grid, t, x, v, field_on, wave_frame, trajectories,
-				                 filename + "_at_t{:03d}.png")
+				                 filename + "_t{:03d}.png")
 
 				# combine the images into a single animated image
 				make_gif(filename, len(t), frame_rate)
 
 	logging.info("done!")
+
+
+def plot_roller_coaster(x_grid_initial: NDArray[float], t: NDArray[float],
+                        x: NDArray[float], v: NDArray[float],
+                        filename_format: str) -> int:
+	# first choose your time stuff
+	T_fundamental = 2*pi/sqrt(g0*k)
+	t_start = t_on + 2*Δt_on
+	num_timesteps_to_skip = int(np.round(interp(t_start, t, arange(size(t)))))
+
+	# remove the transient stuff at the beginning
+	t = t[num_timesteps_to_skip:]
+	x = x[num_timesteps_to_skip:]
+	v = v[num_timesteps_to_skip:]
+
+	# calculate the average speed of each passing particle
+	v_average = (x[:, -1] - x[:, 0])/(t[-1] - t[0])
+	# calculate the period of each trapped particle
+	direction = where(v < ω/k, -1, 1)
+	turning = diff(direction, axis=1)
+	period = empty(shape(v)[0])
+	for j in range(shape(v)[0]):
+		i_turns = nonzero(turning[j, :])[0]
+		if size(i_turns) >= 2:
+			time = (i_turns[-1] - i_turns[0])*(t[1] - t[0])
+			num_turns = (size(i_turns) - 1)/2
+			period[j] = time/num_turns
+		else:
+			period[j] = inf
+
+	# choose four exempletive points (there are so many at least a few should meet our requirements)
+	domain_width = x_grid_initial[-1] - x_grid_initial[0]
+	run_length = 2.1*T_fundamental
+	j_A = argmin(abs(period - run_length))
+	j_B = argmin(abs(period - run_length/2))
+	j_C = argmin(abs(v_average - domain_width/run_length))
+	j_D = argmin(abs(v_average - 2*domain_width/run_length))
+
+	# pare down the data
+	t_end = t_start + run_length
+	num_timesteps_to_plot = int(np.round(interp(t_end, t, arange(size(t)))))
+	assert num_timesteps_to_plot <= shape(x)[1]
+	x = x[[j_A, j_B, j_C, j_D], :num_timesteps_to_plot]
+
+	fig = plt.figure(facecolor="none", figsize=(6, 2))
+	ax = fig.subplots()
+	for i in range(num_timesteps_to_plot):
+		# move with the wave
+		x_grid = x_grid_initial + ω/k*t[i]
+		# calculate the potential
+		ф = g0*cos(k*x_grid - ω*t[i])/k
+		# plot the potential
+		ax.clear()
+		ax.plot(x_grid, ф, color="#e1762b", linewidth=1.4, linestyle="solid", zorder=10)
+		# plot each point
+		for j in range(shape(x)[0]):
+			ax.scatter(periodicize(x[j, i], x_grid[0], x_grid[-1]),
+			           g0*cos(k*x[j, i] - ω*t[i])/k,
+			           s=20,
+			           color=["#125bbc", "#266c01", "#9b4403", "#ae226a"][j],
+			           zorder=20 + j)
+
+		ax.set_xlim(-1.2 + ω/k*t[i], 1.2 + ω/k*t[i])
+		ax.set_ylim(-1.2*g0/k, 1.2*g0/k)
+		ax.set_xticks([])
+		ax.set_yticks([])
+
+		fig.tight_layout()
+		fig.savefig(filename_format.format(i), dpi=75)
+		plt.pause(0.05)
+
+	plt.close(fig)
+	return num_timesteps_to_plot
 
 
 def plot_phase_space(x_grid_initial: NDArray[float], v_grid: NDArray[float], t: NDArray[float],
@@ -105,6 +185,7 @@ def plot_phase_space(x_grid_initial: NDArray[float], v_grid: NDArray[float], t: 
 		# move with the wave (or not)
 		x_grid = x_grid_initial + ω/k*t[i] if wave_frame else x_grid_initial
 
+		# calculate the field and potential
 		E = g0*(1 + erf((t[i] - t_on)/Δt_on))/2*sin(k*x_grid - ω*t[i])
 		ф = g0*(1 + erf((t[i] - t_on)/Δt_on))/2*cos(k*x_grid - ω*t[i])/k
 
@@ -196,7 +277,7 @@ def make_gif(base_filename: str, num_frames: int, frame_rate: float):
 	# load each frame and put them in a list
 	frames = []
 	for i in range(num_frames):
-		frame = imread(f"{base_filename}_at_t{i:03d}.png")
+		frame = imread(f"{base_filename}_t{i:03d}.png")
 		rgb = frame[:, :, :3]
 		alpha = frame[:, :, 3, newaxis]/255.
 		frame = (rgb*alpha + 255*(1 - alpha)).astype(uint8) # remove transparency with a white background
@@ -207,6 +288,7 @@ def make_gif(base_filename: str, num_frames: int, frame_rate: float):
 			frames.append(full(shape(frames[0]), 255, dtype=uint8))
 	# save it all as a GIF
 	mimsave(f"{base_filename}.gif", frames, fps=frame_rate)
+	logging.info(f"saved '{base_filename}.gif'!")
 
 
 def format_as_fraction(coefficient: float, numerator: str, denominator: str):

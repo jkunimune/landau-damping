@@ -36,7 +36,7 @@ def main():
 
 	logging.info("begin.")
 
-	random.seed(0)
+	random.seed(1)
 	makedirs("output", exist_ok=True)
 
 	v0 = random.normal(0, v_thermal, num_samples)  # maxwellian inital distribution
@@ -193,7 +193,7 @@ def plot_phase_space(x_grid_initial: NDArray[float], v_grid: NDArray[float], t: 
 		# show the current time
 		textbox.clear()
 		textbox.axis("off")
-		textbox.text(.23, .95, f"$t$ = {floor(t[i]*10)/10:3.1f} s",
+		textbox.text(.10, .90, f"$t$ = {floor(t[i]*10)/10:3.1f} s",
 		             horizontalalignment="left", verticalalignment="top",
 		             transform=textbox.transAxes)
 

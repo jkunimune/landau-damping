@@ -28,8 +28,8 @@ x_grid = linspace(-1.5, 1.5, 361)  # normalized spacial coordinates
 v_grid = linspace(-0.6*ω/k, 2.1*ω/k, 201)  # set velocity bounds to see wave velocity
 
 num_samples = 1_000_000
-duration = Δt_on + 8.0
 frame_rate = 24
+duration = t_on + 8.0
 
 
 def main():

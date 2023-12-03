@@ -1,13 +1,15 @@
 import logging
 from os import makedirs
 
+import numpy as np
 from imageio.v2 import mimsave
 from imageio.v3 import imread
 from matplotlib import pyplot as plt, ticker
 from numpy import linspace, random, pi, zeros, histogram2d, hypot, sin, stack, ravel, cos, histogram, repeat, \
-	zeros_like, sqrt, meshgrid, arange, concatenate, full, size, where, diff, exp, newaxis, uint8
+	zeros_like, sqrt, meshgrid, arange, concatenate, full, size, where, diff, exp, newaxis, uint8, shape, floor
 from numpy.typing import NDArray
 from scipy import integrate
+from scipy.special import erf
 
 from colormap import colormap
 
@@ -15,15 +17,18 @@ plt.rc("font", size=12)
 
 k = 2*pi  # three full eyes in the simulation domain
 ω = 4*pi  # two full oscillations in 1s
-v_thermal = 0.8*ω/k  # ensure a high gradient at the wave velocity
 g0 = .8  # wave amplitude
+t_on = 0.5  # amount of time before wave appears
+Δt_on = 0.05  # amount of time it takes wave to ramp up
+
+v_thermal = 0.8*ω/k  # ensure a high gradient at the wave velocity
 
 x_grid = linspace(-1.5, 1.5, 361)  # normalized spacial coordinates
 v_grid = linspace(-0.6*ω/k, 2.1*ω/k, 201)  # set velocity bounds to see wave velocity
 
 num_samples = 1_000_000
 frame_rate = 30
-duration = 8
+duration = Δt_on + 8.0
 
 
 def main():
@@ -44,13 +49,12 @@ def main():
 			x = state[0::2]
 			v = state[1::2]
 			dxdt = v
-			dvdt = g0*sin(k*x - ω*t) if field_on else zeros_like(v)
+			dvdt = g0*(1 + erf((t - t_on)/Δt_on))/2*sin(k*x - ω*t) if field_on else zeros_like(v)
 			return ravel(stack([dxdt, dvdt], axis=1))
+		t = linspace(0, duration, round(duration*frame_rate), endpoint=False)
 		solution = integrate.solve_ivp(
-			derivative, t_span=(0, duration - 1/frame_rate),
-			t_eval=linspace(0, duration, duration*frame_rate, endpoint=False),
+			derivative, t_span=(t[0], t[-1]), t_eval=t,
 			y0=ravel(stack([x0, v0], axis=1)))
-		t = solution.t  # type: ignore
 		x = solution.y[0::2, :]  # type: ignore
 		v = solution.y[1::2, :]  # type: ignore
 
@@ -101,10 +105,13 @@ def plot_phase_space(x_grid_initial: NDArray[float], v_grid: NDArray[float], t: 
 		# move with the wave (or not)
 		x_grid = x_grid_initial + ω/k*t[i] if wave_frame else x_grid_initial
 
+		E = g0*(1 + erf((t[i] - t_on)/Δt_on))/2*sin(k*x_grid - ω*t[i])
+		ф = g0*(1 + erf((t[i] - t_on)/Δt_on))/2*cos(k*x_grid - ω*t[i])/k
+
 		# show the current time
 		textbox.clear()
 		textbox.axis("off")
-		textbox.text(.23, .95, f"$t$ = {t[i]:3.1f} s",
+		textbox.text(.23, .95, f"$t$ = {floor(t[i]*10)/10:3.1f} s",
 		             horizontalalignment="left", verticalalignment="top",
 		             transform=textbox.transAxes)
 
@@ -112,12 +119,14 @@ def plot_phase_space(x_grid_initial: NDArray[float], v_grid: NDArray[float], t: 
 		ax_E.clear()
 		ax_E.set_yticks([])
 		ax_E.set_ylabel("Field", color="#672392")
-		ax_E.plot(x_grid, g0*sin(k*x_grid - ω*t[i]) if field_on else zeros_like(x_grid),
+		ax_E.set_ylim(-1.1*g0, 1.1*g0)
+		ax_E.plot(x_grid, E if field_on else zeros_like(x_grid),
 		          color="#672392", linewidth=1.4, zorder=20)
 		ax_V.clear()
 		ax_V.set_yticks([])
 		ax_V.set_ylabel("Potential", color="#ce661a", labelpad=17)
-		ax_V.plot(x_grid, g0/k*cos(k*x_grid - ω*t[i]) if field_on else zeros_like(x_grid),
+		ax_V.set_ylim(-1.4*g0/k, 1.4*g0/k)
+		ax_V.plot(x_grid, ф if field_on else zeros_like(x_grid),
 		          color="#e1762b", linewidth=1.4, linestyle="dotted", zorder=10)
 
 		# plot the distribution function as a function of velocity (space-averaged)
@@ -130,6 +139,7 @@ def plot_phase_space(x_grid_initial: NDArray[float], v_grid: NDArray[float], t: 
 		          color="k", linewidth=1.0, linestyle="dashed")
 		ax_v.set_xlim(0, 0.43*num_samples/v_thermal)
 
+		# plot the 2D distribution function
 		r_particle = (x_grid[1] - x_grid[0])*1.5
 		image = zeros((x_grid.size - 1, v_grid.size - 1))
 		for dx in linspace(-r_particle, r_particle, 7):
@@ -154,14 +164,22 @@ def plot_phase_space(x_grid_initial: NDArray[float], v_grid: NDArray[float], t: 
 		else:
 			ax_image.yaxis.set_major_locator(ticker.MultipleLocator(1.0))
 
+		# plot the phase-space trajectories, if desired
 		if trajectories:
 			X_grid, V_grid = meshgrid(x_grid, v_grid)
-			v_plot = arange(1/5, 10, 2/5)*2*sqrt(g0/k)
-			trajectory_type = concatenate([[0, 0, 1], full(size(v_plot) - 3, 2)])  # 0: trapped, 1: separatrix, 2: passing
-			ax_image.contour(x_grid, v_grid,
-			                 sqrt((V_grid - ω/k)**2 + 2*g0/k*(cos(k*X_grid - ω*t[i]) + 1)),
-			                 levels=v_plot, linewidths=where(trajectory_type == 1, 1.4, 0.7),
+			V_max_grid = sqrt((V_grid - ω/k)**2 + 2*(ф - np.min(ф)))
+			v_max_separatrix = 2*sqrt(g0/k*(1 + erf((t[i] - t_on)/Δt_on))/2)
+			v_max_contours = arange(-4/5, 9, 2/5)*2*sqrt(g0/k) + v_max_separatrix
+			if t[i] >= t_on + Δt_on:
+				trajectory_type = concatenate([[0, 0, 1], full(size(v_max_contours) - 3, 2)])  # 0: trapped, 1: separatrix, 2: passing
+			else:
+				trajectory_type = full(size(v_max_contours), 2)
+			ax_image.contour(x_grid, v_grid, V_max_grid,
+			                 levels=v_max_contours, linewidths=where(trajectory_type == 1, 1.4, 0.7),
 			                 colors="k")
+			# if the separatrix isn't shown, manually add a horizontal line for it
+			if not np.any(V_max_grid < v_max_contours[2]):
+				ax_image.axhline(ω/k, color="k", linewidth=0.7)
 		elif wave_frame:
 			ax_image.axhline(ω/k, color="k", linewidth=1.0, linestyle="dashed")
 

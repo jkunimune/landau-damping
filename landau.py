@@ -18,8 +18,8 @@ plt.rc("font", size=12)
 k = 2*pi  # three full eyes in the simulation domain
 ω = 4*pi  # two full oscillations in 1s
 g0 = .8  # wave amplitude
-t_on = 0.5  # amount of time before wave appears
-Δt_on = 0.05  # amount of time it takes wave to ramp up
+t_on = 1.0  # amount of time before wave appears
+Δt_on = 0.10  # amount of time it takes wave to ramp up
 
 v_thermal = 0.8*ω/k  # ensure a high gradient at the wave velocity
 
@@ -27,7 +27,7 @@ x_grid = linspace(-1.5, 1.5, 361)  # normalized spacial coordinates
 v_grid = linspace(-0.6*ω/k, 2.1*ω/k, 201)  # set velocity bounds to see wave velocity
 
 num_samples = 1_000_000
-frame_rate = 30
+frame_rate = 15
 duration = Δt_on + 8.0
 
 
@@ -183,7 +183,7 @@ def plot_phase_space(x_grid_initial: NDArray[float], v_grid: NDArray[float], t: 
 		elif wave_frame:
 			ax_image.axhline(ω/k, color="k", linewidth=1.0, linestyle="dashed")
 
-		fig.savefig(filename_format.format(i), dpi=150)
+		fig.savefig(filename_format.format(i), dpi=75)
 		plt.pause(0.05)
 	plt.close(fig)
 
